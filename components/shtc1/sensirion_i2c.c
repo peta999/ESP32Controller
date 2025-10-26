@@ -33,6 +33,8 @@
 #include "sensirion_common.h"
 #include "sensirion_i2c.h"
 #include "driver/i2c.h"
+#include "esp_log.h"
+#include "esp_err.h"
 
 #define TAG "SENSIRION_I2C"
 
@@ -82,7 +84,14 @@ void sensirion_i2c_init(uint8_t scl_pin, uint8_t sda_pin) {
         .master.clk_speed = I2C_MASTER_FREQ_HZ,
     };
     i2c_param_config(I2C_MASTER_NUM, &conf);
-    i2c_driver_install(I2C_MASTER_NUM, conf.mode, 0, 0, 0);
+    esp_err_t err = i2c_driver_install(I2C_MASTER_NUM, conf.mode, 0, 0, 0);
+    if (err == ESP_ERR_INVALID_STATE) {
+        err = ESP_OK;
+    }
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to install I2C driver: %s", esp_err_to_name(err));
+        ESP_ERROR_CHECK(err);
+    }
 }
 
 /**
