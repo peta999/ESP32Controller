@@ -19,6 +19,13 @@ extern "C" {
     #include "../components/shtc1/sensirion_i2c.h"
 }
 
+// Callback function to handle measurements
+void measurementHandler(int32_t temperature, int32_t humidity) {
+    printf("measured temperature: %0.2f degreeCelsius, "
+           "measured humidity: %0.2f percentRH\n",
+           temperature / 1000.0f, humidity / 1000.0f);
+}
+
 extern "C" void app_main(void)
 {
     // Create sensor instance with default configuration (address 0x70, normal power mode)
@@ -27,28 +34,20 @@ extern "C" void app_main(void)
     /* Initialize the i2c bus for the current platform */
     sensor.initializeBus();
 
-    /* Busy loop for initialization, because the main loop does not work without
-     * a sensor.
-     */
-    while (!sensor.probe()) {
-        printf("SHT sensor probing failed\n");
-    }
-    printf("SHT sensor probing successful\n");
+/* Busy loop for initialization, because the main loop does not work without
+ * a sensor.
+ */
+while (!sensor.probe()) {
+    printf("SHT sensor probing failed\n");
+}
+printf("SHT sensor probing successful\n");
 
-    while (1) {
-        int32_t temperature, humidity;
-        /* Measure temperature and relative humidity and store into variables
-         * temperature, humidity (each output multiplied by 1000).
-         */
-        if (sensor.measure(temperature, humidity)) {
-            printf("measured temperature: %0.2f degreeCelsius, "
-                   "measured humidity: %0.2f percentRH\n",
-                   temperature / 1000.0f, humidity / 1000.0f);
-        } else {
-            printf("error reading measurement\n");
-        }
+// Set measurement interval and callback, then start continuous measurements
+sensor.setMeasurementInterval(5000); // 1 second interval
+sensor.setMeasurementCallback(measurementHandler);
+sensor.startContinuousMeasurement();
 
-        sensirion_sleep_usec(1000000);
-    }
+// Main task can exit or delay indefinitely
+vTaskDelay(portMAX_DELAY);
     return;
 }

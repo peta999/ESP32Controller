@@ -6,10 +6,13 @@
 extern "C" {
     #include "../../components/shtc1/shtc1.h"
     #include "../../components/shtc1/sensirion_i2c.h"
+    #include "freertos/FreeRTOS.h"
+    #include "freertos/task.h"
 }
 
 SHTC3Sensor::SHTC3Sensor(uint8_t address, bool low_power)
-    : address_(address), low_power_mode_(low_power), initialized_(false) {
+    : address_(address), low_power_mode_(low_power), initialized_(false),
+      measurement_interval_ms_(1000), measurement_callback_(nullptr), continuous_active_(false) {
     // Note: The underlying C library uses a hardcoded address,
     // so we store it here for future extensibility but currently
     // all instances will use the global SHTC1_ADDRESS
@@ -62,4 +65,34 @@ bool SHTC3Sensor::sleep() {
 
 bool SHTC3Sensor::wakeUp() {
     return (shtc1_wake_up() == STATUS_OK);
+}
+
+void SHTC3Sensor::setMeasurementInterval(uint32_t interval_ms) {
+    measurement_interval_ms_ = interval_ms;
+}
+
+void SHTC3Sensor::setMeasurementCallback(void (*callback)(int32_t temperature, int32_t humidity)) {
+    measurement_callback_ = callback;
+}
+
+void SHTC3Sensor::startContinuousMeasurement() {
+    if (continuous_active_) return;
+    continuous_active_ = true;
+    xTaskCreate(continuousMeasureTask, "SHTC3MeasureTask", 2048, (void*)this, 5, nullptr);
+}
+
+void SHTC3Sensor::stopContinuousMeasurement() {
+    continuous_active_ = false;
+}
+
+void SHTC3Sensor::continuousMeasureTask(void* param) {
+    SHTC3Sensor* sensor = (SHTC3Sensor*)param;
+    while (sensor->continuous_active_) {
+        int32_t temperature, humidity;
+        if (sensor->measure(temperature, humidity) && sensor->measurement_callback_) {
+            sensor->measurement_callback_(temperature, humidity);
+        }
+        vTaskDelay(pdMS_TO_TICKS(sensor->measurement_interval_ms_));
+    }
+    vTaskDelete(nullptr);
 }

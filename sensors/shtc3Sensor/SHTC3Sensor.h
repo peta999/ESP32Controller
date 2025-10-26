@@ -69,10 +69,37 @@ public:
     */
    bool wakeUp();
 
+   /**
+    * Set the measurement interval for continuous measurements (in milliseconds)
+    * @param interval_ms Interval between measurements
+    */
+   void setMeasurementInterval(uint32_t interval_ms);
+
+   /**
+    * Set the callback function for measurement results
+    * @param callback Function pointer for handling temperature and humidity data
+    */
+   void setMeasurementCallback(void (*callback)(int32_t temperature, int32_t humidity));
+
+   /**
+    * Start continuous periodic measurements based on the set interval
+    */
+   void startContinuousMeasurement();
+
+   /**
+    * Stop continuous measurements
+    */
+   void stopContinuousMeasurement();
+
 private:
     uint8_t address_;       // I2C address
     bool low_power_mode_;   // Low power mode setting
     bool initialized_;      // Sensor probed and ready
+    uint32_t measurement_interval_ms_;  // Measurement interval in ms
+    void (*measurement_callback_)(int32_t, int32_t);  // Callback for measurements
+    bool continuous_active_;  // Flag for continuous measurement state
+
+    static void continuousMeasureTask(void* param);
 };
 
 #endif // SHTC3Sensor_H_
