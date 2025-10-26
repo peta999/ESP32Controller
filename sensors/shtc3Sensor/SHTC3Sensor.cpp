@@ -14,9 +14,9 @@ SHTC3Sensor::SHTC3Sensor(uint8_t address, bool low_power, uint8_t scl_pin, uint8
     : address_(address), low_power_mode_(low_power), initialized_(false),
       measurement_interval_ms_(1000), measurement_callback_(nullptr), continuous_active_(false),
       scl_pin_(scl_pin), sda_pin_(sda_pin) {
-    // Note: The underlying C library uses a hardcoded address,
-    // so we store it here for future extensibility but currently
-    // all instances will use the global SHTC1_ADDRESS
+    // Note: The underlying C library uses a hardcoded address (0x70),
+    // so we store the configured address here for API compatibility but it has no effect
+    // on sensor operations. All I2C operations will use the fixed C library address.
 }
 
 // Builder class implementations

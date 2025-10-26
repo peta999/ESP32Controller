@@ -18,9 +18,12 @@ public:
         Builder(uint8_t scl_pin, uint8_t sda_pin);
 
         /**
-         * Set the I2C address of the sensor
-         * @param address I2C address (default 0x70)
+         * Set the I2C address of the sensor (currently not implemented)
+         * @param address I2C address (currently ignored - all sensors use fixed address 0x70)
          * @return Reference to this builder for chaining
+         * @note The underlying C driver uses a hardcoded address (0x70) and does not support
+         *       runtime address configuration. This parameter is stored for future compatibility
+         *       but has no effect on sensor operation at this time.
          */
         Builder& setAddress(uint8_t address);
 
@@ -71,8 +74,10 @@ public:
     void setLowPowerMode(bool enable);
 
     /**
-     * Get the configured I2C address
-     * @return sensor address
+     * Get the configured I2C address (note: address setting is currently ignored)
+     * @return sensor address (as configured, though not used by sensor operations)
+     * @note Returns the address that was set during construction, but all I2C operations
+     *       use the fixed address 0x70 due to C library limitations.
      */
     uint8_t getAddress() const;
 
@@ -125,11 +130,12 @@ public:
 
 private:
     /**
-     * Constructor for SHTC1 sensor instance
-     * @param address I2C address of the sensor (default 0x70)
+     * Constructor for SHTC3 sensor instance
+     * @param address I2C address of the sensor (currently ignored - fixed at 0x70)
      * @param low_power Enable low power mode (default false)
      * @param scl_pin GPIO pin for SCL (default 27)
      * @param sda_pin GPIO pin for SDA (default 26)
+     * @note The address parameter is stored but not used due to C library limitations
      */
     SHTC3Sensor(uint8_t address = 0x70, bool low_power = false, uint8_t scl_pin = 27, uint8_t sda_pin = 26);
 
