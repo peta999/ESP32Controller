@@ -2,6 +2,8 @@
 #define SHTC3Sensor_H_
 
 #include <cstdint>
+#include <atomic>
+#include "freertos/FreeRTOS.h"
 
 class SHTC3Sensor {
 public:
@@ -128,7 +130,11 @@ public:
     */
    void stopContinuousMeasurement();
 
-private:
+   /**
+    * Destructor - ensures clean shutdown of continuous measurements
+    */
+   ~SHTC3Sensor();
+
 private:
     /**
      * Constructor for SHTC3 sensor instance
@@ -144,7 +150,8 @@ private:
     bool initialized_;      // Sensor probed and ready
     uint32_t measurement_interval_ms_;  // Measurement interval in ms
     void (*measurement_callback_)(int32_t, int32_t);  // Callback for measurements
-    bool continuous_active_;  // Flag for continuous measurement state
+    std::atomic<bool> continuous_active_;  // Flag for continuous measurement state
+    TaskHandle_t measure_task_handle_;  // Handle for the measurement task
     uint8_t scl_pin_;       // SCL GPIO pin
     uint8_t sda_pin_;       // SDA GPIO pin
 

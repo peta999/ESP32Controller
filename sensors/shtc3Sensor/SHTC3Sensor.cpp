@@ -13,7 +13,7 @@ extern "C" {
 SHTC3Sensor::SHTC3Sensor(uint8_t address, bool low_power, uint8_t scl_pin, uint8_t sda_pin)
     : address_(address), low_power_mode_(low_power), initialized_(false),
       measurement_interval_ms_(1000), measurement_callback_(nullptr), continuous_active_(false),
-      scl_pin_(scl_pin), sda_pin_(sda_pin) {
+      measure_task_handle_(nullptr), scl_pin_(scl_pin), sda_pin_(sda_pin) {
     // Note: The underlying C library uses a hardcoded address (0x70),
     // so we store the configured address here for API compatibility but it has no effect
     // on sensor operations. All I2C operations will use the fixed C library address.
@@ -86,6 +86,10 @@ bool SHTC3Sensor::wakeUp() {
     return (shtc1_wake_up() == STATUS_OK);
 }
 
+SHTC3Sensor::~SHTC3Sensor() {
+    stopContinuousMeasurement();
+}
+
 void SHTC3Sensor::setMeasurementInterval(uint32_t interval_ms) {
     measurement_interval_ms_ = interval_ms;
 }
@@ -95,23 +99,27 @@ void SHTC3Sensor::setMeasurementCallback(void (*callback)(int32_t temperature, i
 }
 
 void SHTC3Sensor::startContinuousMeasurement() {
-    if (continuous_active_) return;
-    continuous_active_ = true;
-    xTaskCreate(continuousMeasureTask, "SHTC3MeasureTask", 2048, (void*)this, 5, nullptr);
+    if (continuous_active_.load()) return;
+    continuous_active_.store(true);
+    xTaskCreate(continuousMeasureTask, "SHTC3MeasureTask", 2048, (void*)this, 5, (TaskHandle_t*)&measure_task_handle_);
 }
 
 void SHTC3Sensor::stopContinuousMeasurement() {
-    continuous_active_ = false;
+    continuous_active_.store(false);
+    while (measure_task_handle_ != nullptr) {
+        vTaskDelay(1);
+    }
 }
 
 void SHTC3Sensor::continuousMeasureTask(void* param) {
     SHTC3Sensor* sensor = (SHTC3Sensor*)param;
-    while (sensor->continuous_active_) {
+    while (sensor->continuous_active_.load()) {
         int32_t temperature, humidity;
         if (sensor->measure(temperature, humidity) && sensor->measurement_callback_) {
             sensor->measurement_callback_(temperature, humidity);
         }
         vTaskDelay(pdMS_TO_TICKS(sensor->measurement_interval_ms_));
     }
+    sensor->measure_task_handle_ = nullptr;
     vTaskDelete(nullptr);
 }
