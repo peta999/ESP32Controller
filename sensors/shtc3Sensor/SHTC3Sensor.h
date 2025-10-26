@@ -92,7 +92,7 @@ public:
      * Get driver version string
      * @return version string
      */
-    const char* getDriverVersion();
+    const char* getDriverVersion() const;
 
    /**
     * Send sensor to sleep (SHTC3 only)

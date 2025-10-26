@@ -74,7 +74,7 @@ bool SHTC3Sensor::readSerial(uint32_t& serial) {
     return (shtc1_read_serial(&serial) == STATUS_OK);
 }
 
-const char* SHTC3Sensor::getDriverVersion() {
+const char* SHTC3Sensor::getDriverVersion() const {
     return shtc1_get_driver_version();
 }
 
