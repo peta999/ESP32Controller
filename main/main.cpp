@@ -34,11 +34,23 @@ extern "C" void app_main(void)
     /* Initialize the i2c bus for the current platform */
     sensor.initializeBus();
 
-/* Busy loop for initialization, because the main loop does not work without
- * a sensor.
- */
+/* Probe loop with backoff delay to yield CPU, limited retries */
+int retry_count = 0;
+const int max_retries = 10;
+int delay_ms = 50;
+const int max_delay_ms = 1000;
+
 while (!sensor.probe()) {
-    printf("SHT sensor probing failed\n");
+    printf("SHT sensor probing failed (retry %d/%d)\n", retry_count + 1, max_retries);
+    retry_count++;
+    if (retry_count >= max_retries) {
+        printf("SHT sensor initialization failed after %d attempts\n", max_retries);
+        return;
+    }
+    vTaskDelay(pdMS_TO_TICKS(delay_ms));
+    if (delay_ms < max_delay_ms) {
+        delay_ms *= 2;
+    }
 }
 printf("SHT sensor probing successful\n");
 
