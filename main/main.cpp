@@ -11,6 +11,11 @@
 #include <stdio.h>
 #include "../sensors/shtc3Sensor/SHTC3Sensor.h"
 
+// Constants for sensor configuration
+constexpr int I2C_SCL_PIN = 27;
+constexpr int I2C_SDA_PIN = 26;
+constexpr int MEASUREMENT_INTERVAL_MS = 5000;
+
 extern "C" {
     #include "freertos/FreeRTOS.h"
     #include "freertos/task.h"
@@ -29,7 +34,7 @@ void measurementHandler(int32_t temperature, int32_t humidity) {
 extern "C" void app_main(void)
 {
     // Create sensor instance with default configuration (address 0x70, normal power mode)
-    SHTC3Sensor sensor = SHTC3Sensor::Builder(27, 26).build();
+    SHTC3Sensor sensor = SHTC3Sensor::Builder(I2C_SCL_PIN, I2C_SDA_PIN).build();
 
     /* Initialize the i2c bus for the current platform */
     sensor.initializeBus();
@@ -47,7 +52,7 @@ while (!sensor.probe()) {
         printf("SHT sensor initialization failed after %d attempts\n", max_retries);
         return;
     }
-    vTaskDelay(pdMS_TO_TICKS(delay_ms));
+vTaskDelay(pdMS_TO_TICKS(delay_ms));
     if (delay_ms < max_delay_ms) {
         delay_ms *= 2;
     }
@@ -55,7 +60,7 @@ while (!sensor.probe()) {
 printf("SHT sensor probing successful\n");
 
 // Set measurement interval and callback, then start continuous measurements
-sensor.setMeasurementInterval(5000); // 1 second interval
+sensor.setMeasurementInterval(MEASUREMENT_INTERVAL_MS); // 5 second interval
 sensor.setMeasurementCallback(measurementHandler);
 sensor.startContinuousMeasurement();
 
