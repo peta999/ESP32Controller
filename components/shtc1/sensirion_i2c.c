@@ -69,12 +69,14 @@ int16_t sensirion_i2c_select_bus(uint8_t bus_idx) {
 /**
  * Initialize all hard- and software components that are needed for the I2C
  * communication.
+ * @param scl_pin GPIO pin number for SCL
+ * @param sda_pin GPIO pin number for SDA
  */
-void sensirion_i2c_init(void) {
+void sensirion_i2c_init(uint8_t scl_pin, uint8_t sda_pin) {
     i2c_config_t conf = {
         .mode = I2C_MODE_MASTER,
-        .sda_io_num = I2C_MASTER_SDA_IO,
-        .scl_io_num = I2C_MASTER_SCL_IO,
+        .sda_io_num = sda_pin,
+        .scl_io_num = scl_pin,
         .sda_pullup_en = GPIO_PULLUP_ENABLE,
         .scl_pullup_en = GPIO_PULLUP_ENABLE,
         .master.clk_speed = I2C_MASTER_FREQ_HZ,

@@ -9,8 +9,10 @@ public:
      * Constructor for SHTC1 sensor instance
      * @param address I2C address of the sensor (default 0x70)
      * @param low_power Enable low power mode (default false)
+     * @param scl_pin GPIO pin for SCL (default 27)
+     * @param sda_pin GPIO pin for SDA (default 26)
      */
-    SHTC3Sensor(uint8_t address = 0x70, bool low_power = false);
+    SHTC3Sensor(uint8_t address = 0x70, bool low_power = false, uint8_t scl_pin = 27, uint8_t sda_pin = 26);
 
     /**
      * Initialize the I2C bus (global initialization, should be called once)
@@ -98,6 +100,8 @@ private:
     uint32_t measurement_interval_ms_;  // Measurement interval in ms
     void (*measurement_callback_)(int32_t, int32_t);  // Callback for measurements
     bool continuous_active_;  // Flag for continuous measurement state
+    uint8_t scl_pin_;       // SCL GPIO pin
+    uint8_t sda_pin_;       // SDA GPIO pin
 
     static void continuousMeasureTask(void* param);
 };
