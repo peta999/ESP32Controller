@@ -9,7 +9,7 @@
 #include "sdkconfig.h"
 #include "esp_mac.h"
 #include <stdio.h>
-#include "../sensors/shtc3/SHTC1Sensor.h"
+#include "../sensors/shtc3Sensor/SHTC3Sensor.h"
 
 extern "C" {
     #include "freertos/FreeRTOS.h"
@@ -22,7 +22,7 @@ extern "C" {
 extern "C" void app_main(void)
 {
     // Create sensor instance with default configuration (address 0x70, normal power mode)
-    SHTC1Sensor sensor;
+    SHTC3Sensor sensor;
 
     /* Initialize the i2c bus for the current platform */
     sensor.initializeBus();

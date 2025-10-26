@@ -1,16 +1,16 @@
-#ifndef SHTC1SENSOR_H_
-#define SHTC1SENSOR_H_
+#ifndef SHTC3Sensor_H_
+#define SHTC3Sensor_H_
 
 #include <cstdint>
 
-class SHTC1Sensor {
+class SHTC3Sensor {
 public:
     /**
      * Constructor for SHTC1 sensor instance
      * @param address I2C address of the sensor (default 0x70)
      * @param low_power Enable low power mode (default false)
      */
-    SHTC1Sensor(uint8_t address = 0x70, bool low_power = false);
+    SHTC3Sensor(uint8_t address = 0x70, bool low_power = false);
 
     /**
      * Initialize the I2C bus (global initialization, should be called once)
@@ -75,4 +75,4 @@ private:
     bool initialized_;      // Sensor probed and ready
 };
 
-#endif // SHTC1SENSOR_H_
+#endif // SHTC3Sensor_H_
