@@ -9,7 +9,7 @@
 #include "sdkconfig.h"
 #include "esp_mac.h"
 #include <stdio.h>
-#include "SHTC1Sensor.h"
+#include "../sensors/shtc3/SHTC1Sensor.h"
 
 extern "C" {
     #include "freertos/FreeRTOS.h"

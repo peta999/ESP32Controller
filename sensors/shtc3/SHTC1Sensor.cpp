@@ -4,8 +4,8 @@
 #include <cinttypes>
 
 extern "C" {
-    #include "../components/shtc1/shtc1.h"
-    #include "../components/shtc1/sensirion_i2c.h"
+    #include "../../components/shtc1/shtc1.h"
+    #include "../../components/shtc1/sensirion_i2c.h"
 }
 
 SHTC1Sensor::SHTC1Sensor(uint8_t address, bool low_power)
