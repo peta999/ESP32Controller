@@ -3,6 +3,8 @@
 #include <iomanip>
 #include <cinttypes>
 
+static const uint32_t kMinMeasurementIntervalMs = 100u;
+
 extern "C" {
     #include "../../components/shtc1/shtc1.h"
     #include "../../components/shtc1/sensirion_i2c.h"
@@ -91,7 +93,12 @@ SHTC3Sensor::~SHTC3Sensor() {
 }
 
 void SHTC3Sensor::setMeasurementInterval(uint32_t interval_ms) {
-    measurement_interval_ms_ = interval_ms;
+    if (interval_ms == 0 || interval_ms < kMinMeasurementIntervalMs) {
+        std::cout << "Invalid measurement interval: " << interval_ms << "ms, clamping to minimum: " << kMinMeasurementIntervalMs << "ms" << std::endl;
+        measurement_interval_ms_ = kMinMeasurementIntervalMs;
+    } else {
+        measurement_interval_ms_ = interval_ms;
+    }
 }
 
 void SHTC3Sensor::setMeasurementCallback(void (*callback)(int32_t temperature, int32_t humidity)) {
