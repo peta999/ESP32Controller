@@ -129,13 +129,13 @@ public:
    void stopContinuousMeasurement();
 
 private:
+private:
     /**
      * Constructor for SHTC3 sensor instance
-     * @param address I2C address of the sensor (currently ignored - fixed at 0x70)
+     * @param address I2C address of the sensor (default 0x70)
      * @param low_power Enable low power mode (default false)
      * @param scl_pin GPIO pin for SCL (default 27)
      * @param sda_pin GPIO pin for SDA (default 26)
-     * @note The address parameter is stored but not used due to C library limitations
      */
     SHTC3Sensor(uint8_t address = 0x70, bool low_power = false, uint8_t scl_pin = 27, uint8_t sda_pin = 26);
 
