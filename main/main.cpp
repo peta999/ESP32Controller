@@ -29,7 +29,7 @@ void measurementHandler(int32_t temperature, int32_t humidity) {
 extern "C" void app_main(void)
 {
     // Create sensor instance with default configuration (address 0x70, normal power mode)
-    SHTC3Sensor sensor;
+    SHTC3Sensor sensor = SHTC3Sensor::Builder(27, 26).build();
 
     /* Initialize the i2c bus for the current platform */
     sensor.initializeBus();

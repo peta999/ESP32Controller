@@ -6,13 +6,43 @@
 class SHTC3Sensor {
 public:
     /**
-     * Constructor for SHTC1 sensor instance
-     * @param address I2C address of the sensor (default 0x70)
-     * @param low_power Enable low power mode (default false)
-     * @param scl_pin GPIO pin for SCL (default 27)
-     * @param sda_pin GPIO pin for SDA (default 26)
+     * Builder class for constructing SHTC3Sensor instances
      */
-    SHTC3Sensor(uint8_t address = 0x70, bool low_power = false, uint8_t scl_pin = 27, uint8_t sda_pin = 26);
+    class Builder {
+    public:
+        /**
+         * Constructor for Builder requiring SCL and SDA pins
+         * @param scl_pin GPIO pin for SCL (required)
+         * @param sda_pin GPIO pin for SDA (required)
+         */
+        Builder(uint8_t scl_pin, uint8_t sda_pin);
+
+        /**
+         * Set the I2C address of the sensor
+         * @param address I2C address (default 0x70)
+         * @return Reference to this builder for chaining
+         */
+        Builder& setAddress(uint8_t address);
+
+        /**
+         * Set the low power mode
+         * @param low_power Enable low power mode (default false)
+         * @return Reference to this builder for chaining
+         */
+        Builder& setLowPower(bool low_power);
+
+        /**
+         * Build and return the SHTC3Sensor instance
+         * @return Constructed SHTC3Sensor object
+         */
+        SHTC3Sensor build() const;
+
+    private:
+        uint8_t address_ = 0x70;
+        bool low_power_ = false;
+        uint8_t scl_pin_;
+        uint8_t sda_pin_;
+    };
 
     /**
      * Initialize the I2C bus (global initialization, should be called once)
@@ -94,6 +124,15 @@ public:
    void stopContinuousMeasurement();
 
 private:
+    /**
+     * Constructor for SHTC1 sensor instance
+     * @param address I2C address of the sensor (default 0x70)
+     * @param low_power Enable low power mode (default false)
+     * @param scl_pin GPIO pin for SCL (default 27)
+     * @param sda_pin GPIO pin for SDA (default 26)
+     */
+    SHTC3Sensor(uint8_t address = 0x70, bool low_power = false, uint8_t scl_pin = 27, uint8_t sda_pin = 26);
+
     uint8_t address_;       // I2C address
     bool low_power_mode_;   // Low power mode setting
     bool initialized_;      // Sensor probed and ready

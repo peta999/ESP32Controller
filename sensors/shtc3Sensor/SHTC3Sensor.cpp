@@ -19,6 +19,24 @@ SHTC3Sensor::SHTC3Sensor(uint8_t address, bool low_power, uint8_t scl_pin, uint8
     // all instances will use the global SHTC1_ADDRESS
 }
 
+// Builder class implementations
+SHTC3Sensor::Builder::Builder(uint8_t scl_pin, uint8_t sda_pin)
+    : scl_pin_(scl_pin), sda_pin_(sda_pin) {}
+
+SHTC3Sensor::Builder& SHTC3Sensor::Builder::setAddress(uint8_t address) {
+    address_ = address;
+    return *this;
+}
+
+SHTC3Sensor::Builder& SHTC3Sensor::Builder::setLowPower(bool low_power) {
+    low_power_ = low_power;
+    return *this;
+}
+
+SHTC3Sensor SHTC3Sensor::Builder::build() const {
+    return SHTC3Sensor(address_, low_power_, scl_pin_, sda_pin_);
+}
+
 bool SHTC3Sensor::initializeBus() {
     sensirion_i2c_init(scl_pin_, sda_pin_);
     return true; // I2C init doesn't return error codes
