@@ -24,14 +24,32 @@ extern "C" {
     #include "../components/shtc1/sensirion_i2c.h"
 }
 
-// Callback function to handle measurements
+/**
+ * @brief Prints a formatted temperature and humidity measurement.
+ *
+ * Formats and outputs temperature and humidity values provided in thousandths
+ * (milli-units) as floating-point degrees Celsius and percent relative humidity.
+ *
+ * @param temperature Temperature in thousandths of degrees Celsius (e.g., 23000 → 23.000°C).
+ * @param humidity Relative humidity in thousandths of percent RH (e.g., 45500 → 45.500% RH).
+ */
 void measurementHandler(int32_t temperature, int32_t humidity) {
     printf("measured temperature: %0.2f degreeCelsius, "
            "measured humidity: %0.2f percentRH\n",
            temperature / 1000.0f, humidity / 1000.0f);
 }
 
-extern "C" void app_main(void)
+extern "C" /**
+ * @brief Program entry point that initializes and starts SHTC3 sensor measurements.
+ *
+ * Initializes the I2C bus, probes the SHTC3 sensor with an exponential backoff and limited retries,
+ * configures the measurement interval and callback, and starts continuous measurements.
+ *
+ * On I2C initialization or repeated probe failure the function prints an error message and returns
+ * without starting measurements. If starting continuous measurements fails the function prints an
+ * error and returns. On success the task delays indefinitely to keep the measurement task alive.
+ */
+void app_main(void)
 {
     // Create sensor instance with default configuration (address 0x70, normal power mode)
     SHTC3Sensor sensor = SHTC3Sensor::Builder(I2C_SCL_PIN, I2C_SDA_PIN).build();
