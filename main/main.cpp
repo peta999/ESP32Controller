@@ -62,7 +62,10 @@ printf("SHT sensor probing successful\n");
 // Set measurement interval and callback, then start continuous measurements
 sensor.setMeasurementInterval(MEASUREMENT_INTERVAL_MS); // 5 second interval
 sensor.setMeasurementCallback(measurementHandler);
-sensor.startContinuousMeasurement();
+if (!sensor.startContinuousMeasurement()) {
+    printf("Failed to start continuous measurement task (possibly insufficient memory)\n");
+    return;
+}
 
 // Main task can exit or delay indefinitely
 vTaskDelay(portMAX_DELAY);

@@ -41,12 +41,12 @@ SHTC3Sensor SHTC3Sensor::Builder::build() const {
 
 bool SHTC3Sensor::initializeBus() {
     sensirion_i2c_init(scl_pin_, sda_pin_);
-    return true; // I2C init doesn't return error codes
+    return true;
 }
 
 bool SHTC3Sensor::probe() {
     if (shtc1_probe() == STATUS_OK) {
-        setLowPowerMode(low_power_mode_); // Apply current configuration
+        setLowPowerMode(low_power_mode_);
         initialized_ = true;
         return true;
     }
@@ -105,11 +105,26 @@ void SHTC3Sensor::setMeasurementCallback(void (*callback)(int32_t temperature, i
     measurement_callback_ = callback;
 }
 
-void SHTC3Sensor::startContinuousMeasurement() {
-    if (continuous_active_.load()) return;
+bool SHTC3Sensor::startContinuousMeasurement() {
+    if (continuous_active_.load()) {
+        printf("Continuous measurement already active\n");
+        return true;
+    }
+
     continuous_active_.store(true);
-    xTaskCreate(continuousMeasureTask, "SHTC3MeasureTask", 2048, (void*)this, 5, (TaskHandle_t*)&measure_task_handle_);
+
+    BaseType_t result = xTaskCreate(continuousMeasureTask, "SHTC3MeasureTask", 2048, (void*)this, 5, &measure_task_handle_
+    );
+
+    if (result == pdPASS) {
+        printf("Continuous measurement task started\n");
+        return true;
+    } else {
+        continuous_active_.store(false);
+        return false;
+    }
 }
+
 
 void SHTC3Sensor::stopContinuousMeasurement() {
     continuous_active_.store(false);

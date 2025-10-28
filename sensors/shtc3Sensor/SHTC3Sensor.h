@@ -121,9 +121,10 @@ public:
    void setMeasurementCallback(void (*callback)(int32_t temperature, int32_t humidity));
 
    /**
-    * Start continuous periodic measurements based on the set interval
+    * Start continuous periodic measurements based on the set interval.
+    * Returns true if the measurement task was successfully started, false otherwise (e.g., due to insufficient memory).
     */
-   void startContinuousMeasurement();
+   bool startContinuousMeasurement();
 
    /**
     * Stop continuous measurements
