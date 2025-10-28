@@ -70,7 +70,7 @@ int16_t sensirion_i2c_select_bus(uint8_t bus_idx);
  * - Re-initializing with the same pins should be safe; reconfiguring to
  *   different pins may reconfigure hardware or driver state.
  */
-void sensirion_i2c_init(uint8_t scl_pin, uint8_t sda_pin);
+bool sensirion_i2c_init(uint8_t scl_pin, uint8_t sda_pin);
 
 /**
  * Release all resources initialized by sensirion_i2c_init().

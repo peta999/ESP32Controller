@@ -45,13 +45,6 @@
 #define I2C_MASTER_FREQ_HZ   100000
 #define I2C_TIMEOUT_MS       100
 
-/*
- * INSTRUCTIONS
- * ============
- *
- * Implement all functions where they are marked as IMPLEMENT.
- * Follow the function specification in the comments.
- */
 
 /**
  * Select the current i2c bus by index.
@@ -74,7 +67,7 @@ int16_t sensirion_i2c_select_bus(uint8_t bus_idx) {
  * @param scl_pin GPIO pin number for SCL
  * @param sda_pin GPIO pin number for SDA
  */
-void sensirion_i2c_init(uint8_t scl_pin, uint8_t sda_pin) {
+bool sensirion_i2c_init(uint8_t scl_pin, uint8_t sda_pin) {
     i2c_config_t conf = {
         .mode = I2C_MODE_MASTER,
         .sda_io_num = sda_pin,
@@ -83,15 +76,19 @@ void sensirion_i2c_init(uint8_t scl_pin, uint8_t sda_pin) {
         .scl_pullup_en = GPIO_PULLUP_ENABLE,
         .master.clk_speed = I2C_MASTER_FREQ_HZ,
     };
-    i2c_param_config(I2C_MASTER_NUM, &conf);
-    esp_err_t err = i2c_driver_install(I2C_MASTER_NUM, conf.mode, 0, 0, 0);
-    if (err == ESP_ERR_INVALID_STATE) {
-        err = ESP_OK;
+    esp_err_t ret = i2c_param_config(I2C_NUM_0, &conf);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to configure I2C parameters: %s", esp_err_to_name(ret));
+        return false;
     }
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to install I2C driver: %s", esp_err_to_name(err));
-        ESP_ERROR_CHECK(err);
+
+    ret = i2c_driver_install(I2C_NUM_0, I2C_MODE_MASTER, 0, 0, 0);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to install I2C driver: %s", esp_err_to_name(ret));
+        return false;
     }
+
+    return true;
 }
 
 /**

@@ -40,8 +40,7 @@ SHTC3Sensor SHTC3Sensor::Builder::build() const {
 }
 
 bool SHTC3Sensor::initializeBus() {
-    sensirion_i2c_init(scl_pin_, sda_pin_);
-    return true;
+    return sensirion_i2c_init(scl_pin_, sda_pin_);
 }
 
 bool SHTC3Sensor::probe() {

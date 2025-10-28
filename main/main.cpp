@@ -37,7 +37,10 @@ extern "C" void app_main(void)
     SHTC3Sensor sensor = SHTC3Sensor::Builder(I2C_SCL_PIN, I2C_SDA_PIN).build();
 
     /* Initialize the i2c bus for the current platform */
-    sensor.initializeBus();
+    if (sensor.initializeBus() == false) {
+        printf("Failed to initialize I2C bus. Exiting...\n");
+        return;
+    }
 
 /* Probe loop with backoff delay to yield CPU, limited retries */
 int retry_count = 0;
