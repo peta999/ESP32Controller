@@ -9,48 +9,86 @@
 #include "sdkconfig.h"
 #include "esp_mac.h"
 #include <stdio.h>
+#include "../sensors/shtc3Sensor/SHTC3Sensor.h"
 
-
+// Constants for sensor configuration
+constexpr int I2C_SCL_PIN = 27;
+constexpr int I2C_SDA_PIN = 26;
+constexpr int MEASUREMENT_INTERVAL_MS = 5000;
 
 extern "C" {
     #include "freertos/FreeRTOS.h"
     #include "freertos/task.h"
-    #include "esp_chip_info.h"
-    #include "esp_flash.h"
-    #include "esp_system.h"    
+    #include "esp_system.h"
     #include "driver/i2c.h"
-    #include "../components/shtc1/shtc1.h"
+    #include "../components/shtc1/sensirion_i2c.h"
 }
 
+/**
+ * @brief Prints a formatted temperature and humidity measurement.
+ *
+ * Formats and outputs temperature and humidity values provided in thousandths
+ * (milli-units) as floating-point degrees Celsius and percent relative humidity.
+ *
+ * @param temperature Temperature in thousandths of degrees Celsius (e.g., 23000 → 23.000°C).
+ * @param humidity Relative humidity in thousandths of percent RH (e.g., 45500 → 45.500% RH).
+ */
+void measurementHandler(int32_t temperature, int32_t humidity) {
+    printf("measured temperature: %0.2f degreeCelsius, "
+           "measured humidity: %0.2f percentRH\n",
+           temperature / 1000.0f, humidity / 1000.0f);
+}
 
-extern "C" void app_main(void)
+extern "C" /**
+ * @brief Program entry point that initializes and starts SHTC3 sensor measurements.
+ *
+ * Initializes the I2C bus, probes the SHTC3 sensor with an exponential backoff and limited retries,
+ * configures the measurement interval and callback, and starts continuous measurements.
+ *
+ * On I2C initialization or repeated probe failure the function prints an error message and returns
+ * without starting measurements. If starting continuous measurements fails the function prints an
+ * error and returns. On success the task delays indefinitely to keep the measurement task alive.
+ */
+void app_main(void)
 {
+    // Create sensor instance with default configuration (address 0x70, normal power mode)
+    SHTC3Sensor sensor = SHTC3Sensor::Builder(I2C_SCL_PIN, I2C_SDA_PIN).build();
+
     /* Initialize the i2c bus for the current platform */
-    sensirion_i2c_init();
-
-    /* Busy loop for initialization, because the main loop does not work without
-     * a sensor.
-     */
-    while (shtc1_probe() != STATUS_OK) {
-        printf("SHT sensor probing failed\n");
+    if (sensor.initializeBus() == false) {
+        printf("Failed to initialize I2C bus. Exiting...\n");
+        return;
     }
-    printf("SHT sensor probing successful\n");
 
-    while (1) {
-        int32_t temperature, humidity;
-        /* Measure temperature and relative humidity and store into variables
-         * temperature, humidity (each output multiplied by 1000).
-         */
-        int8_t ret = shtc1_measure_blocking_read(&temperature, &humidity);
-        if (ret == STATUS_OK) {
-            printf("measured temperature: %0.2f degreeCelsius, "
-                   "measured humidity: %0.2f percentRH\n",
-                   temperature / 1000.0f, humidity / 1000.0f);
-        } else {
-            printf("error reading measurement\n");
-        }
+/* Probe loop with backoff delay to yield CPU, limited retries */
+int retry_count = 0;
+const int max_retries = 10;
+int delay_ms = 50;
+const int max_delay_ms = 1000;
 
-        sensirion_sleep_usec(1000000);
+while (!sensor.probe()) {
+    printf("SHT sensor probing failed (retry %d/%d)\n", retry_count + 1, max_retries);
+    retry_count++;
+    if (retry_count >= max_retries) {
+        printf("SHT sensor initialization failed after %d attempts\n", max_retries);
+        return;
     }
+vTaskDelay(pdMS_TO_TICKS(delay_ms));
+    if (delay_ms < max_delay_ms) {
+        delay_ms *= 2;
+    }
+}
+printf("SHT sensor probing successful\n");
+
+// Set measurement interval and callback, then start continuous measurements
+sensor.setMeasurementInterval(MEASUREMENT_INTERVAL_MS); // 5 second interval
+sensor.setMeasurementCallback(measurementHandler);
+if (!sensor.startContinuousMeasurement()) {
+    printf("Failed to start continuous measurement task (possibly insufficient memory)\n");
+    return;
+}
+
+// Main task can exit or delay indefinitely
+vTaskDelay(portMAX_DELAY);
     return;
 }

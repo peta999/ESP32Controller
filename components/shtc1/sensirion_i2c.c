@@ -33,6 +33,8 @@
 #include "sensirion_common.h"
 #include "sensirion_i2c.h"
 #include "driver/i2c.h"
+#include "esp_log.h"
+#include "esp_err.h"
 
 #define TAG "SENSIRION_I2C"
 
@@ -43,13 +45,6 @@
 #define I2C_MASTER_FREQ_HZ   100000
 #define I2C_TIMEOUT_MS       100
 
-/*
- * INSTRUCTIONS
- * ============
- *
- * Implement all functions where they are marked as IMPLEMENT.
- * Follow the function specification in the comments.
- */
 
 /**
  * Select the current i2c bus by index.
@@ -67,20 +62,36 @@ int16_t sensirion_i2c_select_bus(uint8_t bus_idx) {
 }
 
 /**
- * Initialize all hard- and software components that are needed for the I2C
- * communication.
+ * Initialize and install the I2C master using the given SCL and SDA GPIO pins.
+ *
+ * Configures I2C master parameters and installs the I2C driver for subsequent
+ * transactions on the default I2C peripheral.
+ * @param scl_pin GPIO pin number for SCL.
+ * @param sda_pin GPIO pin number for SDA.
+ * @returns `true` if configuration and driver installation succeeded, `false` otherwise.
  */
-void sensirion_i2c_init(void) {
+bool sensirion_i2c_init(uint8_t scl_pin, uint8_t sda_pin) {
     i2c_config_t conf = {
         .mode = I2C_MODE_MASTER,
-        .sda_io_num = I2C_MASTER_SDA_IO,
-        .scl_io_num = I2C_MASTER_SCL_IO,
+        .sda_io_num = sda_pin,
+        .scl_io_num = scl_pin,
         .sda_pullup_en = GPIO_PULLUP_ENABLE,
         .scl_pullup_en = GPIO_PULLUP_ENABLE,
         .master.clk_speed = I2C_MASTER_FREQ_HZ,
     };
-    i2c_param_config(I2C_MASTER_NUM, &conf);
-    i2c_driver_install(I2C_MASTER_NUM, conf.mode, 0, 0, 0);
+    esp_err_t ret = i2c_param_config(I2C_NUM_0, &conf);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to configure I2C parameters: %s", esp_err_to_name(ret));
+        return false;
+    }
+
+    ret = i2c_driver_install(I2C_NUM_0, I2C_MODE_MASTER, 0, 0, 0);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to install I2C driver: %s", esp_err_to_name(ret));
+        return false;
+    }
+
+    return true;
 }
 
 /**
