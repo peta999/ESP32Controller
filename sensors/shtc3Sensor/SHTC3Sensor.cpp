@@ -1,8 +1,9 @@
 #include "SHTC3Sensor.h"
-#include <iostream>
 #include <iomanip>
 #include <cinttypes>
+#include "esp_log.h"
 
+static const char* TAG = "SHTC3Sensor";
 static const uint32_t kMinMeasurementIntervalMs = 100u;
 
 extern "C" {
@@ -204,7 +205,7 @@ SHTC3Sensor::~SHTC3Sensor() {
  */
 void SHTC3Sensor::setMeasurementInterval(uint32_t interval_ms) {
     if (interval_ms == 0 || interval_ms < kMinMeasurementIntervalMs) {
-        std::cout << "Invalid measurement interval: " << interval_ms << "ms, clamping to minimum: " << kMinMeasurementIntervalMs << "ms" << std::endl;
+        ESP_LOGW(TAG, "Invalid measurement interval: %u ms, clamping to minimum: %u ms", interval_ms, kMinMeasurementIntervalMs);
         measurement_interval_ms_ = kMinMeasurementIntervalMs;
     } else {
         measurement_interval_ms_ = interval_ms;
@@ -233,7 +234,7 @@ void SHTC3Sensor::setMeasurementCallback(void (*callback)(int32_t temperature, i
  */
 bool SHTC3Sensor::startContinuousMeasurement() {
     if (continuous_active_.load()) {
-        printf("Continuous measurement already active\n");
+        ESP_LOGI(TAG, "Continuous measurement already active");
         return true;
     }
 
@@ -243,7 +244,7 @@ bool SHTC3Sensor::startContinuousMeasurement() {
     );
 
     if (result == pdPASS) {
-        printf("Continuous measurement task started\n");
+        ESP_LOGI(TAG, "Continuous measurement task started");
         return true;
     } else {
         continuous_active_.store(false);
