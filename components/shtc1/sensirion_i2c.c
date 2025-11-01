@@ -79,13 +79,17 @@ bool sensirion_i2c_init(uint8_t scl_pin, uint8_t sda_pin) {
         .scl_pullup_en = GPIO_PULLUP_ENABLE,
         .master.clk_speed = I2C_MASTER_FREQ_HZ,
     };
-    esp_err_t ret = i2c_param_config(I2C_NUM_0, &conf);
+    esp_err_t ret = i2c_param_config(I2C_MASTER_NUM, &conf);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to configure I2C parameters: %s", esp_err_to_name(ret));
         return false;
     }
 
-    ret = i2c_driver_install(I2C_NUM_0, I2C_MODE_MASTER, 0, 0, 0);
+    ret = i2c_driver_install(I2C_MASTER_NUM, I2C_MODE_MASTER, 0, 0, 0);
+    if (ret == ESP_ERR_INVALID_STATE) {
+        ESP_LOGW(TAG, "I2C driver already installed; continuing");
+        ret = ESP_OK;
+    }
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to install I2C driver: %s", esp_err_to_name(ret));
         return false;
