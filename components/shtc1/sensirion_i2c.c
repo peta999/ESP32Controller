@@ -62,10 +62,13 @@ int16_t sensirion_i2c_select_bus(uint8_t bus_idx) {
 }
 
 /**
- * Initialize all hard- and software components that are needed for the I2C
- * communication.
- * @param scl_pin GPIO pin number for SCL
- * @param sda_pin GPIO pin number for SDA
+ * Initialize and install the I2C master using the given SCL and SDA GPIO pins.
+ *
+ * Configures I2C master parameters and installs the I2C driver for subsequent
+ * transactions on the default I2C peripheral.
+ * @param scl_pin GPIO pin number for SCL.
+ * @param sda_pin GPIO pin number for SDA.
+ * @returns `true` if configuration and driver installation succeeded, `false` otherwise.
  */
 bool sensirion_i2c_init(uint8_t scl_pin, uint8_t sda_pin) {
     i2c_config_t conf = {

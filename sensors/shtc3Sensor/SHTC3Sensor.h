@@ -5,6 +5,112 @@
 #include <atomic>
 #include "freertos/FreeRTOS.h"
 
+/**
+ * Builder class for constructing SHTC3Sensor instances.
+ */
+
+/**
+ * Create a Builder with required I2C pins.
+ * @param scl_pin GPIO pin number for SCL.
+ * @param sda_pin GPIO pin number for SDA.
+ */
+
+/**
+ * Store a configured I2C address for the sensor (informational only).
+ * @param address I2C address to store; not used for runtime I2C operations.
+ * @return Reference to this Builder for chaining.
+ */
+
+/**
+ * Configure whether the constructed sensor should use low power operation.
+ * @param low_power true to enable low power mode, false to disable.
+ * @return Reference to this Builder for chaining.
+ */
+
+/**
+ * Construct and return an SHTC3Sensor configured by this Builder.
+ * @return Constructed SHTC3Sensor instance.
+ */
+
+/**
+ * Initialize the global I2C bus used by the sensor.
+ * @return `true` if initialization succeeded, `false` otherwise.
+ */
+
+/**
+ * Check whether the sensor is present and responsive on the I2C bus.
+ * @return `true` if the sensor was detected, `false` otherwise.
+ */
+
+/**
+ * Perform a blocking temperature and humidity measurement.
+ * @param temperature Output parameter receiving temperature in millidegrees (value × 1000).
+ * @param humidity Output parameter receiving relative humidity in permille (value × 1000).
+ * @return `true` if the measurement completed successfully, `false` otherwise.
+ */
+
+/**
+ * Enable or disable the sensor's low power operating mode.
+ * @param enable `true` to enable low power mode, `false` to disable it.
+ */
+
+/**
+ * Get the configured I2C address stored in this object.
+ * @return The I2C address that was configured during construction.
+ * @note Returned value is informational; all runtime I2C operations use the fixed address 0x70.
+ */
+
+/**
+ * Read the sensor's serial number.
+ * @param serial Output parameter receiving the 32-bit serial number.
+ * @return `true` if the serial number was read successfully, `false` otherwise.
+ */
+
+/**
+ * Obtain the driver version string.
+ * @return Pointer to a null-terminated version string.
+ */
+
+/**
+ * Put the sensor into its low-power sleep state.
+ * @return `true` if the sleep command succeeded, `false` otherwise.
+ */
+
+/**
+ * Wake the sensor from its sleep state.
+ * @return `true` if the wake command succeeded, `false` otherwise.
+ */
+
+/**
+ * Set the interval used for periodic continuous measurements.
+ * @param interval_ms Interval between measurements in milliseconds.
+ */
+
+/**
+ * Register a callback to receive measurement results from continuous mode.
+ * @param callback Function pointer invoked with temperature and humidity values (both scaled by 1000).
+ */
+
+/**
+ * Start background continuous periodic measurements using the configured interval and callback.
+ * @return `true` if the background measurement task was started successfully, `false` otherwise.
+ */
+
+/**
+ * Stop any ongoing background continuous measurements.
+ */
+
+/**
+ * Destructor that ensures any background continuous measurement is cleanly stopped.
+ */
+
+/**
+ * Construct an SHTC3Sensor with the given configuration.
+ * @param address I2C address to record for this instance (default 0x70).
+ * @param low_power Enable low power mode if `true` (default false).
+ * @param scl_pin GPIO pin number for SCL (default 27).
+ * @param sda_pin GPIO pin number for SDA (default 26).
+ */
 class SHTC3Sensor {
 public:
     /**
