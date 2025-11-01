@@ -34,7 +34,7 @@ extern "C" {
 void measurementHandler(int32_t temperature, int32_t humidity) {
     printf("measured temperature: %0.2f degreeCelsius, "
            "measured humidity: %0.2f percentRH\n",
-           temperature / 1000.0f, humidity / 1000.0f);
+           temperature / 1000.0, humidity / 1000.0);
 }
 
 extern "C" /**
