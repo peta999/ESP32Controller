@@ -6,6 +6,11 @@
 static const char* TAG = "SHTC3Sensor";
 static const uint32_t kMinMeasurementIntervalMs = 100u;
 
+namespace {
+constexpr uint16_t kShtc3TaskStackWords = 2048;
+constexpr UBaseType_t kShtc3TaskPriority = 5;
+} // namespace
+
 extern "C" {
     #include "../../components/shtc1/shtc1.h"
     #include "../../components/shtc1/sensirion_i2c.h"
@@ -233,15 +238,15 @@ void SHTC3Sensor::setMeasurementCallback(void (*callback)(int32_t temperature, i
  * @return true if continuous measurement is already active or the measurement task was started successfully, `false` if task creation failed.
  */
 bool SHTC3Sensor::startContinuousMeasurement() {
-    if (continuous_active_.load()) {
+    bool expected = false;
+    if (!continuous_active_.compare_exchange_strong(expected, true)) {
         ESP_LOGI(TAG, "Continuous measurement already active");
         return true;
     }
 
-    continuous_active_.store(true);
-
-    BaseType_t result = xTaskCreate(continuousMeasureTask, "SHTC3MeasureTask", 2048, (void*)this, 5, &measure_task_handle_
-    );
+    BaseType_t result = xTaskCreate(continuousMeasureTask, "SHTC3MeasureTask",
+                                    kShtc3TaskStackWords, this, kShtc3TaskPriority,
+                                    &measure_task_handle_);
 
     if (result == pdPASS) {
         ESP_LOGI(TAG, "Continuous measurement task started");
