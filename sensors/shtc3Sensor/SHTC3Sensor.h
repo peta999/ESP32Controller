@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <atomic>
 #include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 /**
  * Builder class for constructing SHTC3Sensor instances.
