@@ -243,6 +243,8 @@ public:
    ~SHTC3Sensor();
 
 private:
+    friend class Builder;  // Allow Builder to access private constructor
+
     /**
      * Constructor for SHTC3 sensor instance
      * @param address I2C address of the sensor (default 0x70)
