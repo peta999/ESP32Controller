@@ -262,12 +262,33 @@ bool SHTC3Sensor::startContinuousMeasurement() {
  * @brief Stops any ongoing continuous measurement and waits for its task to finish.
  *
  * Clears the active continuous-measurement flag and blocks until the background
- * measurement task has terminated and its task handle is cleared.
+ * measurement task has terminated and its task handle is cleared. If the task
+ * doesn't exit gracefully within a timeout, it is explicitly deleted.
  */
 void SHTC3Sensor::stopContinuousMeasurement() {
     continuous_active_.store(false);
+
+    // Wait for task to exit gracefully with timeout
+    const TickType_t kMaxWaitTicks = pdMS_TO_TICKS(5000); // 5 second timeout
+    TickType_t startTicks = xTaskGetTickCount();
+
     while (measure_task_handle_ != nullptr) {
-        vTaskDelay(1);
+        vTaskDelay(pdMS_TO_TICKS(10)); // Check every 10ms
+
+        // Check for timeout
+        if ((xTaskGetTickCount() - startTicks) >= kMaxWaitTicks) {
+            ESP_LOGW(TAG, "Continuous measurement task did not exit gracefully, forcing deletion");
+
+            // Suspend all tasks to prevent race conditions during task deletion
+            vTaskSuspendAll();
+            if (measure_task_handle_ != nullptr) {
+                vTaskDelete(measure_task_handle_);
+                measure_task_handle_ = nullptr;
+            }
+            xTaskResumeAll();
+
+            break;
+        }
     }
 }
 
