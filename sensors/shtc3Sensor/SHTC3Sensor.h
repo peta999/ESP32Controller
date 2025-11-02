@@ -255,6 +255,28 @@ private:
      */
     SHTC3Sensor(uint8_t address = 0x70, bool low_power = false, uint8_t scl_pin = 27, uint8_t sda_pin = 26);
 
+    /**
+     * Attempt to reconnect to the sensor after failures
+     * @return true if reconnection successful
+     */
+    bool reconnectSensor();
+
+    /**
+     * Check if sensor needs reconnection based on failure count
+     * @return true if reconnection should be attempted
+     */
+    bool shouldAttemptReconnection();
+
+    /**
+     * Reset failure counters after successful operation
+     */
+    void resetFailureCounters();
+
+    /**
+     * Record a measurement failure and update counters
+     */
+    void recordMeasurementFailure();
+
     uint8_t address_;       // I2C address
     bool low_power_mode_;   // Low power mode setting
     bool initialized_;      // Sensor probed and ready
@@ -264,6 +286,13 @@ private:
     TaskHandle_t measure_task_handle_;  // Handle for the measurement task
     uint8_t scl_pin_;       // SCL GPIO pin
     uint8_t sda_pin_;       // SDA GPIO pin
+
+    // Error tracking and recovery
+    uint32_t consecutive_failures_;     // Number of consecutive measurement failures
+    uint32_t reconnection_attempts_;    // Number of reconnection attempts
+    uint32_t last_reconnection_time_;   // Timestamp of last reconnection attempt
+    static constexpr uint32_t MAX_CONSECUTIVE_FAILURES = 3;  // Max failures before reconnection
+    static constexpr uint32_t MIN_RECONNECTION_INTERVAL_MS = 10000;  // Min time between reconnection attempts
 
     static void continuousMeasureTask(void* param);
 };
