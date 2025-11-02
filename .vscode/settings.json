@@ -20,6 +20,7 @@
   "files.associations": {
     "iostream": "cpp",
     "sensirion_i2c.h": "c",
-    "sensirion_arch_config.h": "c"
+    "sensirion_arch_config.h": "c",
+    "atomic": "cpp"
   }
 }

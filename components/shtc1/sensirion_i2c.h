@@ -51,10 +51,26 @@ extern "C" {
 int16_t sensirion_i2c_select_bus(uint8_t bus_idx);
 
 /**
- * Initialize all hard- and software components that are needed for the I2C
- * communication.
+ * @brief Initialize I2C interface for Sensirion SHTC1 communication on ESP32.
+ *
+ * Configure the I2C GPIO pins and initialize any driver state required
+ * to communicate with Sensirion sensors (SHTC1). This sets the specified
+ * pins for SCL (clock) and SDA (data), configures appropriate pull-ups
+ * and drive modes, and readies the implementation for subsequent
+ * sensirion_i2c_* operations.
+ *
+ * @param scl_pin GPIO number to use as I2C clock (SCL).
+ * @param sda_pin GPIO number to use as I2C data (SDA).
+ *
+ * @note
+ * - Pins must be valid GPIO numbers for the target ESP32 device.
+ * - I2C lines are open-drain; ensure external pull-up resistors are
+ *   provided or enable internal pull-ups if supported and sufficient.
+ * - This function must be called before any other Sensirion I2C functions.
+ * - Re-initializing with the same pins should be safe; reconfiguring to
+ *   different pins may reconfigure hardware or driver state.
  */
-void sensirion_i2c_init(void);
+bool sensirion_i2c_init(uint8_t scl_pin, uint8_t sda_pin);
 
 /**
  * Release all resources initialized by sensirion_i2c_init().
