@@ -277,6 +277,12 @@ private:
      */
     void recordMeasurementFailure();
 
+    /**
+     * Attempt to recover from I2C bus errors
+     * @return true if bus recovery successful
+     */
+    bool recoverI2CBus();
+
     uint8_t address_;       // I2C address
     bool low_power_mode_;   // Low power mode setting
     bool initialized_;      // Sensor probed and ready
@@ -291,7 +297,7 @@ private:
     uint32_t consecutive_failures_;     // Number of consecutive measurement failures
     uint32_t reconnection_attempts_;    // Number of reconnection attempts
     uint32_t last_reconnection_time_;   // Timestamp of last reconnection attempt
-    static constexpr uint32_t MAX_CONSECUTIVE_FAILURES = 3;  // Max failures before reconnection
+    static constexpr uint32_t MAX_CONSECUTIVE_FAILURES = 2;  // Max failures before reconnection (reduced from 3)
     static constexpr uint32_t MIN_RECONNECTION_INTERVAL_MS = 10000;  // Min time between reconnection attempts
 
     static void continuousMeasureTask(void* param);

@@ -118,6 +118,9 @@ bool SHTC3Sensor::probe() {
  * before performing the measurement. On success, the provided output parameters are
  * populated with the measured values.
  *
+ * Includes I2C bus error recovery - if measurement fails, attempts bus recovery before
+ * reporting failure.
+ *
  * @param temperature Reference to an int32_t to receive the measured temperature.
  * @param humidity Reference to an int32_t to receive the measured humidity.
  * @return true if the measurement completed successfully and outputs were populated, false otherwise.
@@ -128,7 +131,22 @@ bool SHTC3Sensor::measure(int32_t& temperature, int32_t& humidity) {
     }
 
     int8_t ret = shtc1_measure_blocking_read(&temperature, &humidity);
-    return (ret == STATUS_OK);
+    if (ret == STATUS_OK) {
+        return true;
+    }
+
+    // Measurement failed - attempt I2C bus recovery
+    ESP_LOGW(TAG, "Measurement failed, attempting I2C bus recovery");
+    if (recoverI2CBus()) {
+        // Try measurement again after bus recovery
+        ret = shtc1_measure_blocking_read(&temperature, &humidity);
+        if (ret == STATUS_OK) {
+            ESP_LOGI(TAG, "Measurement successful after bus recovery");
+            return true;
+        }
+    }
+
+    return false;
 }
 
 /**
@@ -356,11 +374,34 @@ void SHTC3Sensor::resetFailureCounters() {
 }
 
 /**
- * @brief Record a measurement failure and update counters
+ * Record a measurement failure and update counters
  */
 void SHTC3Sensor::recordMeasurementFailure() {
     consecutive_failures_++;
     ESP_LOGW(TAG, "Measurement failure recorded (consecutive: %u)", consecutive_failures_);
+}
+
+/**
+ * Attempt to recover from I2C bus errors by resetting the bus
+ * @return true if bus recovery successful
+ */
+bool SHTC3Sensor::recoverI2CBus() {
+    ESP_LOGW(TAG, "Attempting I2C bus recovery");
+
+    // Release current I2C driver
+    sensirion_i2c_release();
+
+    // Brief delay before reinit
+    vTaskDelay(pdMS_TO_TICKS(50));
+
+    // Reinitialize I2C bus
+    if (!sensirion_i2c_init(scl_pin_, sda_pin_)) {
+        ESP_LOGE(TAG, "Failed to reinitialize I2C bus during recovery");
+        return false;
+    }
+
+    ESP_LOGI(TAG, "I2C bus recovery successful");
+    return true;
 }
 
 /**
@@ -381,10 +422,10 @@ void SHTC3Sensor::continuousMeasureTask(void* param) {
         // Check if we need to attempt reconnection
         if (sensor->shouldAttemptReconnection()) {
             if (!sensor->reconnectSensor()) {
-                // Reconnection failed, use exponential backoff
-                uint32_t backoff_delay = sensor->measurement_interval_ms_ * (1 << sensor->reconnection_attempts_);
-                if (backoff_delay > 30000) { // Cap at 30 seconds
-                    backoff_delay = 30000;
+                // Reconnection failed, use exponential backoff (capped to prevent watchdog timeout)
+                uint32_t backoff_delay = 500 * (1 << sensor->reconnection_attempts_); // Start with 500ms base
+                if (backoff_delay > 3000) { // Cap at 3 seconds to stay under 5-second watchdog timeout
+                    backoff_delay = 3000;
                 }
                 ESP_LOGW(TAG, "Reconnection failed, backing off for %u ms", backoff_delay);
                 vTaskDelay(pdMS_TO_TICKS(backoff_delay));
