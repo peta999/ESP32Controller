@@ -16,6 +16,7 @@ extern "C" {
     #include "../../components/shtc1/sensirion_i2c.h"
     #include "freertos/FreeRTOS.h"
     #include "freertos/task.h"
+    #include "driver/i2c.h"
 }
 
 /**
@@ -276,7 +277,6 @@ bool SHTC3Sensor::startContinuousMeasurement() {
     }
 }
 
-
 /**
  * @brief Stops any ongoing continuous measurement and waits for its task to finish.
  *
@@ -323,21 +323,27 @@ void SHTC3Sensor::stopContinuousMeasurement() {
  * @return true if reconnection successful
  */
 bool SHTC3Sensor::reconnectSensor() {
-    ESP_LOGI(TAG, "Attempting to reconnect to sensor (attempt %u)", reconnection_attempts_ + 1);
+    ESP_LOGI(TAG, "Attempting sensor reconnection (attempt %u)", reconnection_attempts_ + 1);
 
-    // Reset I2C bus (this is a simple approach - in production you might want more sophisticated bus recovery)
+    // Step 1: release bus
     sensirion_i2c_release();
-    vTaskDelay(pdMS_TO_TICKS(100)); // Brief delay before reinit
-    if (!sensirion_i2c_init(scl_pin_, sda_pin_)) {
-        ESP_LOGE(TAG, "Failed to reinitialize I2C bus during reconnection");
-        return false;
-    }
+    vTaskDelay(pdMS_TO_TICKS(50));  // short delay, yields to scheduler
 
-    // Try to probe the sensor
-    if (probe()) {
-        ESP_LOGI(TAG, "Sensor reconnection successful");
-        resetFailureCounters();
-        return true;
+    // Step 2: attempt to init bus, but break into small steps
+    for (int attempt = 0; attempt < 3; attempt++) {
+        if (sensirion_i2c_init(scl_pin_, sda_pin_)) {
+            // Try to probe sensor
+            if (probe()) {
+                ESP_LOGI(TAG, "Sensor reconnection successful");
+                resetFailureCounters();
+                reconnection_attempts_ = 0;
+                return true;
+            }
+        }
+
+        // If init or probe fails, short delay to let watchdog and idle task run
+        vTaskDelay(pdMS_TO_TICKS(50));
+        taskYIELD();  // explicitly yield CPU
     }
 
     ESP_LOGW(TAG, "Sensor reconnection failed");
@@ -345,6 +351,7 @@ bool SHTC3Sensor::reconnectSensor() {
     last_reconnection_time_ = xTaskGetTickCount() * portTICK_PERIOD_MS;
     return false;
 }
+
 
 /**
  * @brief Check if sensor needs reconnection based on failure count
@@ -382,11 +389,49 @@ void SHTC3Sensor::recordMeasurementFailure() {
 }
 
 /**
+ * Check I2C bus health at hardware level
+ * @return true if bus appears healthy, false if hardware-level issues detected
+ */
+bool SHTC3Sensor::checkI2CBusHealth() {
+    // First, check if we can initialize the I2C driver
+    if (!sensirion_i2c_init(scl_pin_, sda_pin_)) {
+        ESP_LOGE(TAG, "I2C bus initialization failed - hardware-level issue detected");
+        return false;
+    }
+
+    // Try a simple I2C bus test by attempting to read from a dummy address
+    // This helps detect if the bus is physically disconnected or shorted
+    uint8_t dummy_data;
+    esp_err_t ret = i2c_master_read_from_device(I2C_NUM_0, 0x00, &dummy_data, 1, pdMS_TO_TICKS(100));
+
+    if (ret == ESP_ERR_TIMEOUT) {
+        ESP_LOGE(TAG, "I2C bus timeout - likely hardware issue (disconnected SCL/SDA)");
+        return false;
+    } else if (ret == ESP_FAIL) {
+        ESP_LOGE(TAG, "I2C bus failure - hardware-level error detected");
+        return false;
+    } else if (ret == ESP_ERR_INVALID_STATE) {
+        ESP_LOGE(TAG, "I2C driver invalid state - hardware issue");
+        return false;
+    }
+
+    // If we get here, basic bus communication is working
+    ESP_LOGI(TAG, "I2C bus health check passed");
+    return true;
+}
+
+/**
  * Attempt to recover from I2C bus errors by resetting the bus
  * @return true if bus recovery successful
  */
 bool SHTC3Sensor::recoverI2CBus() {
     ESP_LOGW(TAG, "Attempting I2C bus recovery");
+
+    // First check if this is a hardware-level issue
+    if (!checkI2CBusHealth()) {
+        ESP_LOGE(TAG, "Hardware-level I2C issue detected - bus recovery may not help");
+        return false;
+    }
 
     // Release current I2C driver
     sensirion_i2c_release();
@@ -422,12 +467,12 @@ void SHTC3Sensor::continuousMeasureTask(void* param) {
         // Check if we need to attempt reconnection
         if (sensor->shouldAttemptReconnection()) {
             if (!sensor->reconnectSensor()) {
-                // Reconnection failed, use exponential backoff (capped to prevent watchdog timeout)
+                // Reconnection failed, use exponential backoff with stricter cap to prevent watchdog timeout
                 uint32_t backoff_delay = 500 * (1 << sensor->reconnection_attempts_); // Start with 500ms base
-                if (backoff_delay > 3000) { // Cap at 3 seconds to stay under 5-second watchdog timeout
-                    backoff_delay = 3000;
+                if (backoff_delay > 2000) { // Cap at 2 seconds to ensure total delay stays under watchdog timeout
+                    backoff_delay = 2000;
                 }
-                ESP_LOGW(TAG, "Reconnection failed, backing off for %u ms", backoff_delay);
+                ESP_LOGW(TAG, "Reconnection failed, backing off for %u ms (capped to prevent watchdog timeout)", backoff_delay);
                 vTaskDelay(pdMS_TO_TICKS(backoff_delay));
                 continue;
             }

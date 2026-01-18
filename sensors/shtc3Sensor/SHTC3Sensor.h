@@ -5,6 +5,7 @@
 #include <atomic>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "driver/i2c.h"
 
 /**
  * Builder class for constructing SHTC3Sensor instances.
@@ -254,6 +255,12 @@ private:
      * @param sda_pin GPIO pin for SDA (default 26)
      */
     SHTC3Sensor(uint8_t address = 0x70, bool low_power = false, uint8_t scl_pin = 27, uint8_t sda_pin = 26);
+
+    /**
+     * Check I2C bus health at hardware level
+     * @return true if bus appears healthy, false if hardware-level issues detected
+     */
+    bool checkI2CBusHealth();
 
     /**
      * Attempt to reconnect to the sensor after failures
