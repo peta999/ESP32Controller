@@ -35,7 +35,7 @@ SHTC3Sensor::SHTC3Sensor(uint8_t address, bool low_power, uint8_t scl_pin, uint8
     : address_(address), low_power_mode_(low_power), initialized_(false),
       measurement_interval_ms_(1000), measurement_callback_(nullptr), continuous_active_(false),
       measure_task_handle_(nullptr), scl_pin_(scl_pin), sda_pin_(sda_pin),
-      consecutive_failures_(0), reconnection_attempts_(0), last_reconnection_time_(0) {
+      error_recovery_() {
     // Note: The underlying C library uses a hardcoded address (0x70),
     // so we store the configured address here for API compatibility but it has no effect
     // on sensor operations. All I2C operations will use the fixed C library address.
@@ -133,16 +133,20 @@ bool SHTC3Sensor::measure(int32_t& temperature, int32_t& humidity) {
 
     int8_t ret = shtc1_measure_blocking_read(&temperature, &humidity);
     if (ret == STATUS_OK) {
+        error_recovery_.resetCounters();
         return true;
     }
 
     // Measurement failed - attempt I2C bus recovery
     ESP_LOGW(TAG, "Measurement failed, attempting I2C bus recovery");
+    error_recovery_.recordFailure();
+
     if (recoverI2CBus()) {
         // Try measurement again after bus recovery
         ret = shtc1_measure_blocking_read(&temperature, &humidity);
         if (ret == STATUS_OK) {
             ESP_LOGI(TAG, "Measurement successful after bus recovery");
+            error_recovery_.resetCounters();
             return true;
         }
     }
@@ -323,7 +327,7 @@ void SHTC3Sensor::stopContinuousMeasurement() {
  * @return true if reconnection successful
  */
 bool SHTC3Sensor::reconnectSensor() {
-    ESP_LOGI(TAG, "Attempting sensor reconnection (attempt %u)", reconnection_attempts_ + 1);
+    ESP_LOGI(TAG, "Attempting sensor reconnection (attempt %u)", error_recovery_.getReconnectionAttempts() + 1);
 
     // Step 1: release bus
     sensirion_i2c_release();
@@ -335,8 +339,7 @@ bool SHTC3Sensor::reconnectSensor() {
             // Try to probe sensor
             if (probe()) {
                 ESP_LOGI(TAG, "Sensor reconnection successful");
-                resetFailureCounters();
-                reconnection_attempts_ = 0;
+                error_recovery_.resetCounters();
                 return true;
             }
         }
@@ -347,8 +350,7 @@ bool SHTC3Sensor::reconnectSensor() {
     }
 
     ESP_LOGW(TAG, "Sensor reconnection failed");
-    reconnection_attempts_++;
-    last_reconnection_time_ = xTaskGetTickCount() * portTICK_PERIOD_MS;
+    error_recovery_.recordReconnectionAttempt();
     return false;
 }
 
@@ -359,33 +361,21 @@ bool SHTC3Sensor::reconnectSensor() {
  * @return true if reconnection should be attempted
  */
 bool SHTC3Sensor::shouldAttemptReconnection() {
-    if (consecutive_failures_ < MAX_CONSECUTIVE_FAILURES) {
-        return false;
-    }
-
-    uint32_t current_time = xTaskGetTickCount() * portTICK_PERIOD_MS;
-    if ((current_time - last_reconnection_time_) < MIN_RECONNECTION_INTERVAL_MS) {
-        return false; // Too soon since last attempt
-    }
-
-    return true;
+    return error_recovery_.shouldAttemptReconnection();
 }
 
 /**
  * @brief Reset failure counters after successful operation
  */
 void SHTC3Sensor::resetFailureCounters() {
-    consecutive_failures_ = 0;
-    reconnection_attempts_ = 0;
-    last_reconnection_time_ = 0;
+    error_recovery_.resetCounters();
 }
 
 /**
  * Record a measurement failure and update counters
  */
 void SHTC3Sensor::recordMeasurementFailure() {
-    consecutive_failures_++;
-    ESP_LOGW(TAG, "Measurement failure recorded (consecutive: %u)", consecutive_failures_);
+    error_recovery_.recordFailure();
 }
 
 /**
@@ -468,10 +458,7 @@ void SHTC3Sensor::continuousMeasureTask(void* param) {
         if (sensor->shouldAttemptReconnection()) {
             if (!sensor->reconnectSensor()) {
                 // Reconnection failed, use exponential backoff with stricter cap to prevent watchdog timeout
-                uint32_t backoff_delay = 500 * (1 << sensor->reconnection_attempts_); // Start with 500ms base
-                if (backoff_delay > 2000) { // Cap at 2 seconds to ensure total delay stays under watchdog timeout
-                    backoff_delay = 2000;
-                }
+                uint32_t backoff_delay = sensor->error_recovery_.calculateBackoffDelay();
                 ESP_LOGW(TAG, "Reconnection failed, backing off for %u ms (capped to prevent watchdog timeout)", backoff_delay);
                 vTaskDelay(pdMS_TO_TICKS(backoff_delay));
                 continue;
@@ -482,12 +469,9 @@ void SHTC3Sensor::continuousMeasureTask(void* param) {
         bool measurement_success = sensor->measure(temperature, humidity);
 
         if (measurement_success) {
-            sensor->resetFailureCounters();
             if (sensor->measurement_callback_) {
                 sensor->measurement_callback_(temperature, humidity);
             }
-        } else {
-            sensor->recordMeasurementFailure();
         }
 
         vTaskDelay(pdMS_TO_TICKS(sensor->measurement_interval_ms_));

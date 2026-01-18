@@ -16,7 +16,7 @@
     "--compile-commands-dir=c:\\Users\\hoppe\\Desktop\\example\\build"
   ],
   "idf.flashType": "UART",
-  "idf.portWin": "COM6",
+  "idf.portWin": "COM3",
   "files.associations": {
     "iostream": "cpp",
     "sensirion_i2c.h": "c",

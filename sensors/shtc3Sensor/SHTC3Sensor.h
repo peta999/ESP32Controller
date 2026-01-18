@@ -6,6 +6,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/i2c.h"
+#include "SHTC3ErrorRecovery.h"
 
 /**
  * Builder class for constructing SHTC3Sensor instances.
@@ -300,12 +301,8 @@ private:
     uint8_t scl_pin_;       // SCL GPIO pin
     uint8_t sda_pin_;       // SDA GPIO pin
 
-    // Error tracking and recovery
-    uint32_t consecutive_failures_;     // Number of consecutive measurement failures
-    uint32_t reconnection_attempts_;    // Number of reconnection attempts
-    uint32_t last_reconnection_time_;   // Timestamp of last reconnection attempt
-    static constexpr uint32_t MAX_CONSECUTIVE_FAILURES = 2;  // Max failures before reconnection (reduced from 3)
-    static constexpr uint32_t MIN_RECONNECTION_INTERVAL_MS = 10000;  // Min time between reconnection attempts
+    // Error recovery manager
+    SHTC3ErrorRecovery error_recovery_;
 
     static void continuousMeasureTask(void* param);
 };
